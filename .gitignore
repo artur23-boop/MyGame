@@ -1,2 +1,11 @@
 artifacts/
 node_modules/
+Unity/[Ll]ibrary/
+Unity/[Tt]emp/
+Unity/[Oo]bj/
+Unity/[Bb]uilds/
+Unity/[Ll]ogs/
+Unity/[Uu]ser[Ss]ettings/
+Unity/.vs/
+Unity/*.csproj
+Unity/*.sln
