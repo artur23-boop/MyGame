@@ -40,7 +40,7 @@ namespace WinterYard
             Warm.SetColor("_EmissionColor", new Color(1f, .55f, .16f) * 1.7f);
             var ground = Shape("Snow courtyard", PrimitiveType.Cube, new Vector3(0,-.3f,0),
                 new Vector3(44,.6f,44), Snow, true, parent);
-            var snowFriction = new PhysicMaterial("Snow friction") { dynamicFriction = .6f, staticFriction = .6f };
+            var snowFriction = new PhysicsMaterial("Snow friction") { dynamicFriction = .6f, staticFriction = .6f };
             ground.GetComponent<Collider>().sharedMaterial = snowFriction;
             MakeHill(parent);
             var buildingMat = Material(new Color(.25f,.31f,.37f));
@@ -123,7 +123,7 @@ namespace WinterYard
             hill.AddComponent<MeshRenderer>().sharedMaterial=Snow;
             hill.AddComponent<MeshCollider>().sharedMesh=mesh;
             Shape("Icy summit",PrimitiveType.Cylinder,new Vector3(0,3.015f,0),new Vector3(4.35f,.015f,4.35f),Ice,false,parent);
-            var slippery=new PhysicMaterial("Hill ice") { dynamicFriction=.1f,staticFriction=.1f,frictionCombine=PhysicMaterialCombine.Minimum };
+            var slippery=new PhysicsMaterial("Hill ice") { dynamicFriction=.1f,staticFriction=.1f,frictionCombine=PhysicsMaterialCombine.Minimum };
             hill.GetComponent<Collider>().sharedMaterial=slippery;
         }
 

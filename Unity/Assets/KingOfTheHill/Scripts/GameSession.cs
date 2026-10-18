@@ -33,7 +33,7 @@ namespace WinterYard
         }
         static void EnsureSession(Scene scene,LoadSceneMode mode)
         {
-            if(!FindObjectOfType<GameSession>())new GameObject("Winter Yard").AddComponent<GameSession>();
+            if(!FindFirstObjectByType<GameSession>())new GameObject("Winter Yard").AddComponent<GameSession>();
         }
         void Awake()
         {
@@ -42,7 +42,7 @@ namespace WinterYard
             var world=new GameObject("Procedural winter yard");world.transform.SetParent(transform);
             Arena.Build(world.transform);
             // Avoid duplicate cameras/audio listeners if starting from a default Unity scene.
-            foreach(var camera in FindObjectsOfType<Camera>())camera.gameObject.SetActive(false);
+            foreach(var camera in FindObjectsByType<Camera>(FindObjectsSortMode.None))camera.gameObject.SetActive(false);
             var viewObj=new GameObject("Third person camera");viewObj.transform.SetParent(transform);
             View=viewObj.AddComponent<Camera>();View.tag="MainCamera";View.fieldOfView=65;View.farClipPlane=130;
             View.clearFlags=CameraClearFlags.SolidColor;View.backgroundColor=new Color(.24f,.34f,.46f);
@@ -54,7 +54,7 @@ namespace WinterYard
         {
             foreach(var actor in Fighters)if(actor)Destroy(actor.gameObject);
             Fighters.Clear();
-            foreach(var shot in FindObjectsOfType<Snowball>())Destroy(shot.gameObject);
+            foreach(var shot in FindObjectsByType<Snowball>(FindObjectsSortMode.None))Destroy(shot.gameObject);
             string[] names={"Ты","Мишка","Санёк","Димон"};
             Color[] colors={new Color(.9f,.64f,.25f),new Color(.72f,.25f,.28f),new Color(.27f,.6f,.5f),new Color(.46f,.38f,.69f)};
             for(int i=0;i<4;i++)

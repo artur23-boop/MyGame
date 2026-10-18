@@ -16,7 +16,7 @@ namespace WinterYard
             var shot=obj.AddComponent<Snowball>();shot.owner=source;
             shot.body=obj.AddComponent<Rigidbody>();shot.body.mass=.1f;
             shot.body.collisionDetectionMode=CollisionDetectionMode.ContinuousDynamic;
-            shot.body.velocity=direction*17+Vector3.up*3.2f;
+            shot.body.linearVelocity=direction*17+Vector3.up*3.2f;
             Physics.IgnoreCollision(obj.GetComponent<Collider>(),source.GetComponent<Collider>());
         }
         void Update(){if(GameSession.Instance.Running){lifetime-=Time.deltaTime;if(lifetime<=0)Destroy(gameObject);}}
@@ -25,7 +25,7 @@ namespace WinterYard
             var fighter=collision.collider.GetComponentInParent<Fighter>();
             if(fighter&&fighter!=owner)
             {
-                var direction=Vector3.ProjectOnPlane(body.velocity,Vector3.up).normalized;
+                var direction=Vector3.ProjectOnPlane(body.linearVelocity,Vector3.up).normalized;
                 bool head=transform.position.y>fighter.transform.position.y+.45f;
                 fighter.Hit(direction*(head?10:7)+Vector3.up*2,head?1.8f:.7f);
             }

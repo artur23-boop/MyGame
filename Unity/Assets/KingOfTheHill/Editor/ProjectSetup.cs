@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using UnityEditor;
+using UnityEditor.Build;
 using UnityEditor.Build.Reporting;
 using UnityEditor.SceneManagement;
 using UnityEngine;
@@ -25,9 +26,11 @@ namespace WinterYardEditor
         }
 
         [MenuItem("Winter Yard/Prepare project")]
-        public static void Prepare()
+        public static void Prepare() { PrepareProject(); }
+
+        static bool PrepareProject()
         {
-            if(!Application.isBatchMode&&!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo())return;
+            if(!Application.isBatchMode&&!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo())return false;
             Directory.CreateDirectory(Root+"/Scenes");Directory.CreateDirectory(Root+"/Rendering");AssetDatabase.Refresh();
             if(!GraphicsSettings.defaultRenderPipeline)
             {
@@ -58,6 +61,15 @@ namespace WinterYardEditor
             PlayerSettings.companyName="Winter Yard";PlayerSettings.productName="Царь горы — Зимний двор";
             PlayerSettings.defaultScreenWidth=1280;PlayerSettings.defaultScreenHeight=800;
             PlayerSettings.runInBackground=false;
+            // This project deliberately uses the legacy Input API (no Input System package).
+            var settings=new SerializedObject(AssetDatabase.LoadAllAssetsAtPath("ProjectSettings/ProjectSettings.asset")[0]);
+            var input=settings.FindProperty("activeInputHandler");
+            if(input==null)throw new Exception("Cannot configure Active Input Handling. Set it to Input Manager (Old) in Player Settings.");
+            if(input.intValue!=0)
+            {
+                input.intValue=0;settings.ApplyModifiedPropertiesWithoutUndo();
+                Debug.LogWarning("Active Input Handling changed to Input Manager (Old). Restart Unity before playing or building.");
+            }
             if(!File.Exists(ScenePath))
             {
                 var scene=EditorSceneManager.NewScene(NewSceneSetup.EmptyScene,NewSceneMode.Single);
@@ -68,21 +80,46 @@ namespace WinterYardEditor
             AssetDatabase.SaveAssets();
             if(!Application.isBatchMode)EditorSceneManager.OpenScene(ScenePath);
             Debug.Log("Winter Yard prepared. Open WinterYard scene and press Play.");
+            return true;
         }
 
         [MenuItem("Winter Yard/Build Windows x64")]
         public static void BuildWindows()
         {
-            Prepare();
+            if(!PrepareProject())return;
             string output=Environment.GetEnvironmentVariable("WINTER_YARD_BUILD_PATH");
             if(string.IsNullOrEmpty(output))output="Builds/Windows/KingOfTheHill.exe";
-            Directory.CreateDirectory(Path.GetDirectoryName(output));
+            Build(BuildTarget.StandaloneWindows64,output);
+        }
+
+        [MenuItem("Winter Yard/Build macOS (Universal)")]
+        public static void BuildMac()
+        {
+            if(!PrepareProject())return;
+            string output=Environment.GetEnvironmentVariable("WINTER_YARD_MAC_BUILD_PATH");
+            if(string.IsNullOrEmpty(output))output="Builds/macOS/KingOfTheHill.app";
+            int previous=PlayerSettings.GetArchitecture(NamedBuildTarget.Standalone);
+            try
+            {
+                // 2 = Intel x86_64 + Apple silicon universal macOS player.
+                PlayerSettings.SetArchitecture(NamedBuildTarget.Standalone,2);
+                Build(BuildTarget.StandaloneOSX,output);
+            }
+            finally { PlayerSettings.SetArchitecture(NamedBuildTarget.Standalone,previous); }
+        }
+
+        static void Build(BuildTarget target,string output)
+        {
+            if(!BuildPipeline.IsBuildTargetSupported(BuildTargetGroup.Standalone,target))
+                throw new Exception("Missing platform module for "+target+". Install matching Build Support in Unity Hub.");
+            var directory=Path.GetDirectoryName(output);
+            if(!string.IsNullOrEmpty(directory))Directory.CreateDirectory(directory);
             var report=BuildPipeline.BuildPlayer(new BuildPlayerOptions{
                 scenes=new[]{ScenePath},locationPathName=output,
-                target=BuildTarget.StandaloneWindows64,options=BuildOptions.None
+                target=target,options=BuildOptions.None
             });
-            if(report.summary.result!=BuildResult.Succeeded)throw new Exception("Windows build failed: "+report.summary.result);
-            Debug.Log("Windows build succeeded: "+Path.GetFullPath(output));
+            if(report.summary.result!=BuildResult.Succeeded)throw new Exception(target+" build failed: "+report.summary.result);
+            Debug.Log(target+" build succeeded: "+Path.GetFullPath(output));
         }
     }
 }

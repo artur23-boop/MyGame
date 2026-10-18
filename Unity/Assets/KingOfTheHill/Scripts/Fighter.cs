@@ -24,11 +24,11 @@ namespace WinterYard
         public void Initialize(string label, Color color, bool player)
         {
             DisplayName=label;CoatColor=color;IsPlayer=player;
-            body=GetComponent<Rigidbody>();body.mass=1;body.drag=.8f;body.angularDrag=5;
+            body=GetComponent<Rigidbody>();body.mass=1;body.linearDamping=.8f;body.angularDamping=5;
             body.constraints=RigidbodyConstraints.FreezeRotation;body.interpolation=RigidbodyInterpolation.Interpolate;
             body.collisionDetectionMode=CollisionDetectionMode.ContinuousDynamic;
             var capsule=GetComponent<CapsuleCollider>();capsule.height=2.1f;capsule.radius=.42f;
-            capsule.sharedMaterial=new PhysicMaterial("Boots") {dynamicFriction=.15f,staticFriction=.15f};
+            capsule.sharedMaterial=new PhysicsMaterial("Boots") {dynamicFriction=.15f,staticFriction=.15f};
             var visual=new GameObject("Winter outfit");visual.transform.SetParent(transform,false);model=visual.transform;
             var coat=Arena.Material(color);var skin=Arena.Material(new Color(.87f,.68f,.53f));
             Arena.Shape("Puffer jacket",PrimitiveType.Capsule,new Vector3(0,-.05f,0),new Vector3(.82f,.6f,.65f),coat,false,model);
@@ -79,7 +79,7 @@ namespace WinterYard
             if(!IsPlayer)Think(dt);
             if(Stun<=0)
             {
-                var velocity=body.velocity;
+                var velocity=body.linearVelocity;
                 var horizontal=new Vector3(velocity.x,0,velocity.z);
                 float acceleration=Grounded?22:6;
                 var desired=move*5;
@@ -98,7 +98,7 @@ namespace WinterYard
             OnSummit=new Vector2(p.x,p.z).magnitude<2.2f&&p.y>3.8f&&Grounded&&Stun<=0;
             if(OnSummit){Score+=dt;if(Score>=GameSession.Instance.Target)GameSession.Instance.Finish(this);}
             if(Stun>0&&p.y>1.3f)body.AddForce(new Vector3(p.x,0,p.z).normalized*6,ForceMode.Acceleration);
-            if(p.y<-5){body.position=new Vector3(0,2,-12);body.velocity=Vector3.zero;}
+            if(p.y<-5){body.position=new Vector3(0,2,-12);body.linearVelocity=Vector3.zero;}
             if(IsPlayer&&Grounded&&move.sqrMagnitude>.2f){stepClock-=dt;if(stepClock<=0){stepClock=.32f;GameSession.Instance.Beep(85,.035f,.025f);}}
         }
 
