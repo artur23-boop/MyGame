@@ -21,6 +21,9 @@ namespace WinterYard
         float sink;
         bool leftStep;
         Vector3 move, facing=Vector3.forward;
+        public Vector3 AimDirection => facing;
+        public const float PushStrength=3.5f;
+        public const float PushLift=.5f;
         float think, stepClock, jumpBuffer, dashBuffer, animationTime;
         bool pushRequested, throwRequested, superRequested;
         public bool Grounded => Physics.Raycast(transform.position, Vector3.down, 1.2f,1<<Arena.GroundLayer,QueryTriggerInteraction.Ignore);
@@ -46,6 +49,7 @@ namespace WinterYard
                 if(side<0)leftBoot=boot.transform;else rightBoot=boot.transform;
                 Arena.Shape("Mitten",PrimitiveType.Sphere,new Vector3(side*.53f,-.05f,.12f),Vector3.one*.27f,coat,false,model);
             }
+            if(player)gameObject.AddComponent<SnowballAim>();
             if(player) Arena.Shape("Your marker",PrimitiveType.Sphere,new Vector3(0,1.5f,0),Vector3.one*.16f,Arena.Warm,false,model);
         }
 
@@ -117,7 +121,7 @@ namespace WinterYard
             var p=transform.position;
             OnSummit=new Vector2(p.x,p.z).magnitude<2.2f&&p.y>3.8f&&Grounded&&Stun<=0&&Combat.KnockdownRemaining<=0;
             if(OnSummit){Score+=dt;if(Score>=GameSession.Instance.Target)GameSession.Instance.Finish(this);}
-            if(Stun>0&&p.y>1.3f)body.AddForce(new Vector3(p.x,0,p.z).normalized*6,ForceMode.Acceleration);
+            if(Stun>0&&p.y>1.3f&&!grounded)body.AddForce(new Vector3(p.x,0,p.z).normalized*2,ForceMode.Acceleration);
             if(p.y<-5){body.position=new Vector3(0,2,-12);body.linearVelocity=Vector3.zero;}
             var planarSpeed=Vector3.ProjectOnPlane(body.linearVelocity,Vector3.up).magnitude;
             if(grounded&&planarSpeed>.65f&&Stun<=0)
@@ -170,7 +174,7 @@ namespace WinterYard
                 if(other==this||other.Stun>1)continue;
                 var delta=other.transform.position-transform.position;
                 if(delta.magnitude<2.3f&&Vector3.Dot(delta.normalized,facing)>.35f)
-                    landed|=other.Hit(facing*8+Vector3.up*2,.6f);
+                    landed|=other.Hit(facing*PushStrength+Vector3.up*PushLift,.6f);
             }
             if(landed)Combat.RegisterHit();else Combat.BreakCombo();
         }

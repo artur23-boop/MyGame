@@ -147,7 +147,7 @@ namespace WinterYard
                 if(player.Combat.KnockdownRemaining>0)Text("Сбит с ног! Подъём через "+player.Combat.KnockdownRemaining.ToString("0.0")+" с");
                 else if(player.Stun>0)Text("Поднимайся, весь двор смотрит!");
                 GUILayout.EndArea();
-                // Camera-forward aiming point.
+                // Screen crosshair complements the actual ballistic preview.
                 Box(new Rect(638,397,4,6),new Color(1,.85f,.5f,.9f));Box(new Rect(635,400,10,2),new Color(1,.85f,.5f,.9f));
                 if(phase==Phase.Countdown){GUI.Label(new Rect(550,290,200,90),Mathf.CeilToInt(countdown).ToString(),new GUIStyle(title){fontSize=80,alignment=TextAnchor.MiddleCenter});}
             }
