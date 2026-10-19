@@ -22,8 +22,8 @@ namespace WinterYard
         bool leftStep;
         Vector3 move, facing=Vector3.forward;
         public Vector3 AimDirection => facing;
-        public const float PushStrength=3.5f;
-        public const float PushLift=.5f;
+        public const float PushStrength=8f;
+        public const float PushLift=2f;
         float think, stepClock, jumpBuffer, dashBuffer, animationTime;
         bool pushRequested, throwRequested, superRequested;
         public bool Grounded => Physics.Raycast(transform.position, Vector3.down, 1.2f,1<<Arena.GroundLayer,QueryTriggerInteraction.Ignore);
@@ -121,7 +121,7 @@ namespace WinterYard
             var p=transform.position;
             OnSummit=new Vector2(p.x,p.z).magnitude<2.2f&&p.y>3.8f&&Grounded&&Stun<=0&&Combat.KnockdownRemaining<=0;
             if(OnSummit){Score+=dt;if(Score>=GameSession.Instance.Target)GameSession.Instance.Finish(this);}
-            if(Stun>0&&p.y>1.3f&&!grounded)body.AddForce(new Vector3(p.x,0,p.z).normalized*2,ForceMode.Acceleration);
+            if(Stun>0&&p.y>1.3f)body.AddForce(new Vector3(p.x,0,p.z).normalized*6,ForceMode.Acceleration);
             if(p.y<-5){body.position=new Vector3(0,2,-12);body.linearVelocity=Vector3.zero;}
             var planarSpeed=Vector3.ProjectOnPlane(body.linearVelocity,Vector3.up).magnitude;
             if(grounded&&planarSpeed>.65f&&Stun<=0)
