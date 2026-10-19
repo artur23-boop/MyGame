@@ -138,12 +138,13 @@ namespace WinterYard
                 Text(player.Score.ToString("0.0")+" / "+Target+" сек",title);
                 Text(player.OnSummit?"★ Ты на вершине!":"Заберись в ледяной круг",small);GUILayout.EndArea();
                 Box(new Rect(38,165,260,4),new Color(.3f,.4f,.5f));Box(new Rect(38,165,260*Mathf.Clamp01(player.Score/Target),4),new Color(.95f,.7f,.3f));
-                GUILayout.BeginArea(new Rect(1025,30,230,150));for(int i=1;i<Fighters.Count;i++)Text(Fighters[i].DisplayName+"  "+Fighters[i].Score.ToString("0.0")+" сек");GUILayout.EndArea();
+                GUILayout.BeginArea(new Rect(925,30,330,150));for(int i=1;i<Fighters.Count;i++)Text(Fighters[i].DisplayName+"  "+Fighters[i].Score.ToString("0.0")+" сек"+(Fighters[i].Combat.KnockdownRemaining>0?" • лежит "+Fighters[i].Combat.KnockdownRemaining.ToString("0.0")+" с":""));GUILayout.EndArea();
                 GUILayout.BeginArea(new Rect(25,670,1220,120));
-                Text("ЛКМ: толчок "+(player.PushCooldown>0?player.PushCooldown.ToString("0.0"):"готов")+"    SHIFT: рывок "+(player.DashCooldown>0?player.DashCooldown.ToString("0.0"):"готов")+"    Снежок: "+(player.HasSnow?"ПКМ — бросить":"E у сугроба — слепить"));
+                Text("ЛКМ: толчок "+(player.PushCooldown>0?player.PushCooldown.ToString("0.0"):"готов")+"    SHIFT: рывок "+(player.DashCooldown>0?player.DashCooldown.ToString("0.0"):"готов")+"    Снежок: "+(player.HasSnow?"ПКМ — бросить":"перезарядка "+player.Combat.ReloadRemaining.ToString("0.0")+" с"));
                 Text("WASD — движение  •  Мышь — камера и прицел  •  Space — прыжок  •  Esc — пауза",small);
-                if(player.Stun>0)Text("Поднимайся, весь двор смотрит!");
-                else if(!player.HasSnow&&NearSnowbank(player.transform.position))Text("Нажми E, чтобы слепить снежок");
+                Text(player.Combat.SuperReady?"★ СУПЕРСНЕЖОК ГОТОВ — Q (нужен заряженный снежок)":"Комбо: "+player.Combat.ComboHits+" / "+CombatState.ComboTarget+(player.Combat.ComboHits>0?" • продолжи за "+player.Combat.ComboRemaining.ToString("0.0")+" с":" • попади 3 раза"),small);
+                if(player.Combat.KnockdownRemaining>0)Text("Сбит с ног! Подъём через "+player.Combat.KnockdownRemaining.ToString("0.0")+" с");
+                else if(player.Stun>0)Text("Поднимайся, весь двор смотрит!");
                 GUILayout.EndArea();
                 // Camera-forward aiming point.
                 Box(new Rect(638,397,4,6),new Color(1,.85f,.5f,.9f));Box(new Rect(635,400,10,2),new Color(1,.85f,.5f,.9f));
@@ -165,7 +166,7 @@ namespace WinterYard
                     Text("Чувствительность мыши",small);Sensitivity=GUILayout.HorizontalSlider(Sensitivity,.5f,5);
                     GUILayout.Space(15);if(GUILayout.Button("ВЫЙТИ ВО ДВОР",button))StartMatch();
                     Text("Побед во дворе: "+PlayerPrefs.GetInt("WinterYardWins",0),small);
-                    Text("WASD — идти • мышь — смотреть • Space — прыгать\nЛКМ — толкать • ПКМ — снежок • E — набрать снег",small);
+                    Text("WASD — идти • мышь — смотреть • Space — прыгать\nЛКМ — толкать • ПКМ — снежок • Q — суперснежок",small);
                     if(GUILayout.Button("Выход",button))Application.Quit();
                 }
                 else

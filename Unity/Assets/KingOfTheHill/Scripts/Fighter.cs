@@ -12,13 +12,14 @@ namespace WinterYard
         public float PushCooldown { get; private set; }
         public float DashCooldown { get; private set; }
         public float Stun { get; private set; }
-        public bool HasSnow { get; private set; } = true;
+        public readonly CombatState Combat=new CombatState();
+        public bool HasSnow => Combat.HasSnow;
         public bool OnSummit { get; private set; }
         Rigidbody body;
         Transform model;
         Vector3 move, facing=Vector3.forward;
         float think, stepClock, jumpBuffer, dashBuffer, animationTime;
-        bool pushRequested, throwRequested, collectRequested;
+        bool pushRequested, throwRequested, superRequested;
         public bool Grounded => Physics.Raycast(transform.position, Vector3.down, 1.2f,1<<Arena.GroundLayer,QueryTriggerInteraction.Ignore);
 
         public void Initialize(string label, Color color, bool player)
@@ -60,14 +61,14 @@ namespace WinterYard
                 if(Input.GetKeyDown(KeyCode.LeftShift)||Input.GetKeyDown(KeyCode.RightShift))dashBuffer=.15f;
                 pushRequested|=Input.GetMouseButtonDown(0);
                 throwRequested|=Input.GetMouseButtonDown(1);
-                collectRequested|=Input.GetKeyDown(KeyCode.E);
+                superRequested|=Input.GetKeyDown(KeyCode.Q);
             }
             animationTime+=Time.deltaTime;
             if(model)
             {
-                float tilt=Stun>0?Mathf.Sin(animationTime*14)*45:0;
+                float tilt=Combat.KnockdownRemaining>0?85:Stun>0?Mathf.Sin(animationTime*14)*45:0;
                 model.localRotation=Quaternion.Euler(tilt,0,0);
-                model.localPosition=Stun>0?Vector3.zero:Vector3.up*Mathf.Sin(animationTime*12)*move.magnitude*.035f;
+                model.localPosition=Combat.KnockdownRemaining>0?new Vector3(0,-.65f,0):Stun>0?Vector3.zero:Vector3.up*Mathf.Sin(animationTime*12)*move.magnitude*.035f;
             }
         }
 
@@ -75,9 +76,10 @@ namespace WinterYard
         {
             if(!GameSession.Instance.Running)return;
             float dt=Time.fixedDeltaTime;
+            Combat.Tick(dt);
             PushCooldown=Mathf.Max(0,PushCooldown-dt);DashCooldown=Mathf.Max(0,DashCooldown-dt);Stun=Mathf.Max(0,Stun-dt);
             if(!IsPlayer)Think(dt);
-            if(Stun<=0)
+            if(Stun<=0&&Combat.KnockdownRemaining<=0)
             {
                 var velocity=body.linearVelocity;
                 var horizontal=new Vector3(velocity.x,0,velocity.z);
@@ -89,13 +91,16 @@ namespace WinterYard
                 if(jumpBuffer>0&&Grounded){body.AddForce(Vector3.up*6.5f,ForceMode.VelocityChange);jumpBuffer=0;}
                 if(dashBuffer>0&&DashCooldown<=0){body.AddForce((move.sqrMagnitude>.01f?move.normalized:facing)*9,ForceMode.VelocityChange);DashCooldown=3;dashBuffer=0;}
                 if(pushRequested)Push();
-                if(throwRequested&&HasSnow){Snowball.Launch(this,facing);HasSnow=false;GameSession.Instance.Beep(650,.08f);}
-                if(collectRequested&&!HasSnow&&GameSession.NearSnowbank(transform.position)){HasSnow=true;GameSession.Instance.Beep(450,.1f);}
+                if((superRequested&&Combat.SuperReady)||throwRequested)
+                {
+                    bool super=superRequested&&Combat.SuperReady;
+                    if(Combat.TryThrow(super)){Snowball.Launch(this,facing,super);GameSession.Instance.Beep(super?900:650,.08f);}
+                }
             }
             jumpBuffer=Mathf.Max(0,jumpBuffer-dt);dashBuffer=Mathf.Max(0,dashBuffer-dt);
-            pushRequested=throwRequested=collectRequested=false;
+            pushRequested=throwRequested=superRequested=false;
             var p=transform.position;
-            OnSummit=new Vector2(p.x,p.z).magnitude<2.2f&&p.y>3.8f&&Grounded&&Stun<=0;
+            OnSummit=new Vector2(p.x,p.z).magnitude<2.2f&&p.y>3.8f&&Grounded&&Stun<=0&&Combat.KnockdownRemaining<=0;
             if(OnSummit){Score+=dt;if(Score>=GameSession.Instance.Target)GameSession.Instance.Finish(this);}
             if(Stun>0&&p.y>1.3f)body.AddForce(new Vector3(p.x,0,p.z).normalized*6,ForceMode.Acceleration);
             if(p.y<-5){body.position=new Vector3(0,2,-12);body.linearVelocity=Vector3.zero;}
@@ -109,11 +114,6 @@ namespace WinterYard
             think=GameSession.Instance.Difficulty==0?.65f:GameSession.Instance.Difficulty==2?.18f:.35f;
             var p=transform.position;var destination=Vector3.zero;
             float radius=new Vector2(p.x,p.z).magnitude;
-            if(!HasSnow&&radius>9)
-            {
-                destination=GameSession.ClosestSnowbank(p);
-                if(GameSession.NearSnowbank(p))collectRequested=true;
-            }
             Fighter enemy=null;float distance=float.MaxValue;
             foreach(var other in GameSession.Instance.Fighters)
             {
@@ -128,7 +128,8 @@ namespace WinterYard
             if(enemy&&distance<2.2f){facing=Vector3.ProjectOnPlane(enemy.transform.position-p,Vector3.up).normalized;pushRequested=true;}
             if(enemy&&distance>4&&distance<11&&HasSnow&&Random.value<.15f)
             {
-                facing=Vector3.ProjectOnPlane(enemy.transform.position-p,Vector3.up).normalized;throwRequested=true;
+                facing=Vector3.ProjectOnPlane(enemy.transform.position-p,Vector3.up).normalized;
+                if(Combat.SuperReady)superRequested=true;else throwRequested=true;
             }
         }
 
@@ -137,20 +138,27 @@ namespace WinterYard
             if(PushCooldown>0)return;
             PushCooldown=.8f;
             GameSession.Instance.Beep(150,.1f);
+            bool landed=false;
             foreach(var other in GameSession.Instance.Fighters)
             {
                 if(other==this||other.Stun>1)continue;
                 var delta=other.transform.position-transform.position;
                 if(delta.magnitude<2.3f&&Vector3.Dot(delta.normalized,facing)>.35f)
-                    other.Hit(facing*8+Vector3.up*2,.6f);
+                    landed|=other.Hit(facing*8+Vector3.up*2,.6f);
             }
+            if(landed)Combat.RegisterHit();else Combat.BreakCombo();
         }
 
-        public void Hit(Vector3 impulse,float stun)
+        public bool Hit(Vector3 impulse,float stun,bool knockdown=false)
         {
-            Stun=Mathf.Max(Stun,stun);OnSummit=false;
+            // A downed opponent cannot be farmed for combo or kept down by repeated hits.
+            if(Combat.KnockdownRemaining>0)return false;
+            Combat.BreakCombo();
+            if(knockdown)Combat.KnockDown();
+            Stun=Mathf.Max(Stun,knockdown?CombatState.KnockdownSeconds:stun);OnSummit=false;
             body.AddForce(impulse,ForceMode.VelocityChange);
-            GameSession.Instance.Beep(220,.14f);
+            GameSession.Instance.Beep(knockdown?110:220,.14f);
+            return true;
         }
     }
 }
