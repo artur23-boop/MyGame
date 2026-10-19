@@ -84,6 +84,20 @@ namespace WinterYard
         void OnApplicationFocus(bool focused){if(!focused&&Running)Pause();}
         void Pause(){phase=Phase.Paused;Time.timeScale=0;CursorState(false);}
         void Resume(){phase=Phase.Playing;Time.timeScale=1;CursorState(true);}
+        public void ReturnToMenu()
+        {
+            // Keep menu navigation separate from closing the application.
+            phase=Phase.Menu;Time.timeScale=1;countdown=0;winner=null;
+            CursorState(false);MakeFighters();
+        }
+        static void CloseGame()
+        {
+#if UNITY_EDITOR
+            UnityEditor.EditorApplication.isPlaying=false;
+#else
+            Application.Quit();
+#endif
+        }
         static void CursorState(bool locked){Cursor.lockState=locked?CursorLockMode.Locked:CursorLockMode.None;Cursor.visible=!locked;}
         public void Finish(Fighter actor)
         {
@@ -168,13 +182,13 @@ namespace WinterYard
                     GUILayout.Space(15);if(GUILayout.Button("ВЫЙТИ ВО ДВОР",button))StartMatch();
                     Text("Побед во дворе: "+PlayerPrefs.GetInt("WinterYardWins",0),small);
                     Text("WASD — идти • мышь — смотреть • Space — прыгать\nЛКМ — толкать • ПКМ — снежок • Q — суперснежок",small);
-                    if(GUILayout.Button("Выход",button))Application.Quit();
+                    if(GUILayout.Button("ЗАКРЫТЬ ИГРУ",button))CloseGame();
                 }
                 else
                 {
                     if(phase==Phase.Result){foreach(var actor in Fighters)Text(actor.DisplayName+" — "+actor.Score.ToString("0.0")+" сек");GUILayout.Space(20);if(GUILayout.Button("ЕЩЁ ОДИН РАУНД",button))StartMatch();}
                     else if(GUILayout.Button("ПРОДОЛЖИТЬ",button))Resume();
-                    if(GUILayout.Button("В МЕНЮ",button)){Time.timeScale=1;phase=Phase.Menu;CursorState(false);}
+                    if(GUILayout.Button("ВЫХОД В ГЛАВНОЕ МЕНЮ",button))ReturnToMenu();
                 }
                 GUILayout.EndArea();
             }
