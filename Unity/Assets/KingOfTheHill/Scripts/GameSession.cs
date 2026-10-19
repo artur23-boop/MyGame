@@ -54,6 +54,7 @@ namespace WinterYard
         {
             foreach(var actor in Fighters)if(actor)Destroy(actor.gameObject);
             Fighters.Clear();
+            if(SnowFootprints.Instance)SnowFootprints.Instance.Clear();
             foreach(var shot in FindObjectsByType<Snowball>(FindObjectsSortMode.None))Destroy(shot.gameObject);
             string[] names={"Ты","Мишка","Санёк","Димон"};
             Color[] colors={new Color(.9f,.64f,.25f),new Color(.72f,.25f,.28f),new Color(.27f,.6f,.5f),new Color(.46f,.38f,.69f)};
@@ -141,7 +142,7 @@ namespace WinterYard
                 GUILayout.BeginArea(new Rect(925,30,330,150));for(int i=1;i<Fighters.Count;i++)Text(Fighters[i].DisplayName+"  "+Fighters[i].Score.ToString("0.0")+" сек"+(Fighters[i].Combat.KnockdownRemaining>0?" • лежит "+Fighters[i].Combat.KnockdownRemaining.ToString("0.0")+" с":""));GUILayout.EndArea();
                 GUILayout.BeginArea(new Rect(25,670,1220,120));
                 Text("ЛКМ: толчок "+(player.PushCooldown>0?player.PushCooldown.ToString("0.0"):"готов")+"    SHIFT: рывок "+(player.DashCooldown>0?player.DashCooldown.ToString("0.0"):"готов")+"    Снежок: "+(player.HasSnow?"ПКМ — бросить":"перезарядка "+player.Combat.ReloadRemaining.ToString("0.0")+" с"));
-                Text("WASD — движение  •  Мышь — камера и прицел  •  Space — прыжок  •  Esc — пауза",small);
+                Text("Под ногами: "+(player.Surface.IsIce?"ЛЁД — скользко":player.Surface.Depth>.2f?"РЫХЛЫЙ СНЕГ — вязнет":"УТОПТАННЫЙ СНЕГ")+" • глубина "+Mathf.RoundToInt(player.Surface.Depth*100)+" см",small);
                 Text(player.Combat.SuperReady?"★ СУПЕРСНЕЖОК ГОТОВ — Q (нужен заряженный снежок)":"Комбо: "+player.Combat.ComboHits+" / "+CombatState.ComboTarget+(player.Combat.ComboHits>0?" • продолжи за "+player.Combat.ComboRemaining.ToString("0.0")+" с":" • попади 3 раза"),small);
                 if(player.Combat.KnockdownRemaining>0)Text("Сбит с ног! Подъём через "+player.Combat.KnockdownRemaining.ToString("0.0")+" с");
                 else if(player.Stun>0)Text("Поднимайся, весь двор смотрит!");

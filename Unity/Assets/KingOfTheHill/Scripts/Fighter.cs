@@ -16,7 +16,10 @@ namespace WinterYard
         public bool HasSnow => Combat.HasSnow;
         public bool OnSummit { get; private set; }
         Rigidbody body;
-        Transform model;
+        Transform model, leftBoot, rightBoot;
+        public SnowSample Surface {get;private set;}
+        float sink;
+        bool leftStep;
         Vector3 move, facing=Vector3.forward;
         float think, stepClock, jumpBuffer, dashBuffer, animationTime;
         bool pushRequested, throwRequested, superRequested;
@@ -39,7 +42,8 @@ namespace WinterYard
             Arena.Shape("Scarf",PrimitiveType.Cube,new Vector3(0,.43f,.02f),new Vector3(.67f,.13f,.6f),Arena.Warm,false,model);
             for(int side=-1;side<=1;side+=2)
             {
-                Arena.Shape("Boot",PrimitiveType.Capsule,new Vector3(side*.22f,-.73f,.05f),new Vector3(.28f,.25f,.4f),Arena.Dark,false,model);
+                var boot=Arena.Shape("Boot",PrimitiveType.Capsule,new Vector3(side*.22f,-.73f,.05f),new Vector3(.28f,.25f,.4f),Arena.Dark,false,model);
+                if(side<0)leftBoot=boot.transform;else rightBoot=boot.transform;
                 Arena.Shape("Mitten",PrimitiveType.Sphere,new Vector3(side*.53f,-.05f,.12f),Vector3.one*.27f,coat,false,model);
             }
             if(player) Arena.Shape("Your marker",PrimitiveType.Sphere,new Vector3(0,1.5f,0),Vector3.one*.16f,Arena.Warm,false,model);
@@ -63,12 +67,19 @@ namespace WinterYard
                 throwRequested|=Input.GetMouseButtonDown(1);
                 superRequested|=Input.GetKeyDown(KeyCode.Q);
             }
-            animationTime+=Time.deltaTime;
+            float walkSpeed=Vector3.ProjectOnPlane(body.linearVelocity,Vector3.up).magnitude;
+            animationTime+=Time.deltaTime*Mathf.Lerp(.6f,1.2f,Mathf.Clamp01(walkSpeed/4.8f));
+            bool walking=Grounded&&walkSpeed>.25f&&Stun<=0;
+            sink=Mathf.MoveTowards(sink,Grounded?Surface.Depth*.4f:0,Time.deltaTime*1.8f);
             if(model)
             {
                 float tilt=Combat.KnockdownRemaining>0?85:Stun>0?Mathf.Sin(animationTime*14)*45:0;
                 model.localRotation=Quaternion.Euler(tilt,0,0);
-                model.localPosition=Combat.KnockdownRemaining>0?new Vector3(0,-.65f,0):Stun>0?Vector3.zero:Vector3.up*Mathf.Sin(animationTime*12)*move.magnitude*.035f;
+                model.localPosition=Combat.KnockdownRemaining>0?new Vector3(0,-.65f,0):Stun>0?Vector3.zero:Vector3.up*((walking?Mathf.Abs(Mathf.Sin(animationTime*7))*.075f:0)-sink);
+                float stride=walking?Mathf.Sin(animationTime*7):0;
+                float lift=.12f+Surface.Depth*.45f;
+                leftBoot.localPosition=new Vector3(-.22f,-.73f+Mathf.Max(0,stride)*lift,.05f+stride*.16f);
+                rightBoot.localPosition=new Vector3(.22f,-.73f+Mathf.Max(0,-stride)*lift,.05f-stride*.16f);
             }
         }
 
@@ -77,19 +88,23 @@ namespace WinterYard
             if(!GameSession.Instance.Running)return;
             float dt=Time.fixedDeltaTime;
             Combat.Tick(dt);
+            bool grounded=Grounded;
+            Surface=SnowSurface.Sample(transform.position.x,transform.position.z);
+            body.linearDamping=grounded?Surface.Damping:.05f;
             PushCooldown=Mathf.Max(0,PushCooldown-dt);DashCooldown=Mathf.Max(0,DashCooldown-dt);Stun=Mathf.Max(0,Stun-dt);
             if(!IsPlayer)Think(dt);
             if(Stun<=0&&Combat.KnockdownRemaining<=0)
             {
                 var velocity=body.linearVelocity;
                 var horizontal=new Vector3(velocity.x,0,velocity.z);
-                float acceleration=Grounded?22:6;
-                var desired=move*5;
+                float acceleration=grounded?Surface.Acceleration:6;
+                if(grounded&&Surface.IsIce&&move.sqrMagnitude<.01f)acceleration=2;
+                var desired=move*(grounded?Surface.Speed:5);
                 // Limit acceleration, preserving impulses instead of overwriting knockback.
                 body.AddForce(Vector3.ClampMagnitude(desired-horizontal,acceleration*dt),ForceMode.VelocityChange);
                 if(facing.sqrMagnitude>.01f)body.MoveRotation(Quaternion.LookRotation(facing));
-                if(jumpBuffer>0&&Grounded){body.AddForce(Vector3.up*6.5f,ForceMode.VelocityChange);jumpBuffer=0;}
-                if(dashBuffer>0&&DashCooldown<=0){body.AddForce((move.sqrMagnitude>.01f?move.normalized:facing)*9,ForceMode.VelocityChange);DashCooldown=3;dashBuffer=0;}
+                if(jumpBuffer>0&&grounded){body.AddForce(Vector3.up*Surface.Jump,ForceMode.VelocityChange);jumpBuffer=0;}
+                if(dashBuffer>0&&DashCooldown<=0){body.AddForce((move.sqrMagnitude>.01f?move.normalized:facing)*(grounded?Surface.Dash:9),ForceMode.VelocityChange);DashCooldown=3;dashBuffer=0;}
                 if(pushRequested)Push();
                 if((superRequested&&Combat.SuperReady)||throwRequested)
                 {
@@ -104,7 +119,18 @@ namespace WinterYard
             if(OnSummit){Score+=dt;if(Score>=GameSession.Instance.Target)GameSession.Instance.Finish(this);}
             if(Stun>0&&p.y>1.3f)body.AddForce(new Vector3(p.x,0,p.z).normalized*6,ForceMode.Acceleration);
             if(p.y<-5){body.position=new Vector3(0,2,-12);body.linearVelocity=Vector3.zero;}
-            if(IsPlayer&&Grounded&&move.sqrMagnitude>.2f){stepClock-=dt;if(stepClock<=0){stepClock=.32f;GameSession.Instance.Beep(85,.035f,.025f);}}
+            var planarSpeed=Vector3.ProjectOnPlane(body.linearVelocity,Vector3.up).magnitude;
+            if(grounded&&planarSpeed>.65f&&Stun<=0)
+            {
+                stepClock-=dt;
+                if(stepClock<=0)
+                {
+                    stepClock=Mathf.Lerp(.44f,.26f,Mathf.Clamp01(planarSpeed/5));leftStep=!leftStep;
+                    if(!Surface.IsIce&&SnowFootprints.Instance&&Physics.Raycast(transform.position,Vector3.down,out var hit,1.3f,1<<Arena.GroundLayer))
+                        SnowFootprints.Instance.Step(hit.point,hit.normal,transform.forward,Surface.Depth,leftStep);
+                    if(IsPlayer)GameSession.Instance.Beep(Surface.Depth>.2f?65:95,.055f,.025f+Surface.Depth*.06f);
+                }
+            }
         }
 
         void Think(float dt)

@@ -42,6 +42,7 @@ namespace WinterYard
                 new Vector3(44,.6f,44), Snow, true, parent);
             var snowFriction = new PhysicsMaterial("Snow friction") { dynamicFriction = .6f, staticFriction = .6f };
             ground.GetComponent<Collider>().sharedMaterial = snowFriction;
+            SnowSurface.Build(parent);
             MakeHill(parent);
             var buildingMat = Material(new Color(.25f,.31f,.37f));
             var windowDark = Material(new Color(.08f,.14f,.2f));
@@ -61,7 +62,7 @@ namespace WinterYard
             {
                 float angle = i*Mathf.PI*.5f+Mathf.PI*.25f;
                 var p = new Vector3(Mathf.Cos(angle)*15,0,Mathf.Sin(angle)*15);
-                Shape("Snowbank — press E", PrimitiveType.Sphere, p, new Vector3(5,1.7f,4), Snow, true, parent);
+                Shape("Deep snowbank", PrimitiveType.Sphere, p, new Vector3(5,1.7f,4), Snow, true, parent);
                 GameSession.Snowbanks.Add(p);
                 Lamp(p+new Vector3(3,0,0), parent);
             }
