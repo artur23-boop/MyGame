@@ -86,7 +86,7 @@ namespace WinterYard
             }
         }
         void OnApplicationFocus(bool focused){if(!focused&&Running)Pause();}
-        void Pause(){phase=Phase.Paused;Time.timeScale=0;CursorState(false);}
+        void Pause(){foreach(var fighter in Fighters)fighter.CancelThrowCharge();phase=Phase.Paused;Time.timeScale=0;CursorState(false);}
         void Resume(){phase=Phase.Playing;Time.timeScale=1;CursorState(true);}
         public void ReturnToMenu()
         {
@@ -165,13 +165,20 @@ namespace WinterYard
                 Box(new Rect(38,165,260,4),new Color(.3f,.4f,.5f));Box(new Rect(38,165,260*Mathf.Clamp01(player.Score/Target),4),new Color(.95f,.7f,.3f));
                 GUILayout.BeginArea(new Rect(925,30,330,150));for(int i=1;i<Fighters.Count;i++)Text(Fighters[i].DisplayName+"  "+Fighters[i].Score.ToString("0.0")+" сек"+(Fighters[i].Combat.KnockdownRemaining>0?" • лежит "+Fighters[i].Combat.KnockdownRemaining.ToString("0.0")+" с":""));GUILayout.EndArea();
                 GUILayout.BeginArea(new Rect(25,670,1220,120));
-                Text("ЛКМ: толчок "+(player.PushCooldown>0?player.PushCooldown.ToString("0.0"):"готов")+"    SHIFT: рывок "+(player.DashCooldown>0?player.DashCooldown.ToString("0.0"):"готов")+"    Снежок: "+(player.HasSnow?"ПКМ — бросить":"перезарядка "+player.Combat.ReloadRemaining.ToString("0.0")+" с"));
+                Text("ЛКМ: толчок "+(player.PushCooldown>0?player.PushCooldown.ToString("0.0"):"готов")+"    SHIFT: рывок "+(player.DashCooldown>0?player.DashCooldown.ToString("0.0"):"готов")+"    Снежок: "+(player.HasSnow?"удерживай ПКМ → отпусти":"перезарядка "+player.Combat.ReloadRemaining.ToString("0.0")+" с"));
                 Text("Под ногами: "+(player.Surface.IsIce?"ЛЁД — скользко":player.Surface.Depth>.2f?"РЫХЛЫЙ СНЕГ — вязнет":"УТОПТАННЫЙ СНЕГ")+" • глубина "+Mathf.RoundToInt(player.Surface.Depth*100)+" см",small);
-                Text(player.Combat.SuperReady?"★ СУПЕРСНЕЖОК ГОТОВ — Q (нужен заряженный снежок)":"Комбо: "+player.Combat.ComboHits+" / "+CombatState.ComboTarget+(player.Combat.ComboHits>0?" • продолжи за "+player.Combat.ComboRemaining.ToString("0.0")+" с":" • попади 3 раза"),small);
+                Text(player.Combat.SuperReady?"★ СУПЕРСНЕЖОК — удерживай Q и отпусти":"Комбо: "+player.Combat.ComboHits+" / "+CombatState.ComboTarget+(player.Combat.ComboHits>0?" • продолжи за "+player.Combat.ComboRemaining.ToString("0.0")+" с":" • попади 3 раза"),small);
                 if(player.Combat.KnockdownRemaining>0)Text("Сбит с ног! Подъём через "+player.Combat.KnockdownRemaining.ToString("0.0")+" с");
                 else if(player.IsRagdoll)Text("Поднимаемся…");
                 else if(player.Stun>0)Text("Поднимайся, весь двор смотрит!");
                 GUILayout.EndArea();
+                GUI.Label(new Rect(460,580,500,28),"НАВЕС: "+Mathf.RoundToInt(player.ThrowAngle)+"° • колесо мыши — высота дуги",small);
+                if(player.IsCharging)
+                {
+                    Box(new Rect(480,635,320,7),new Color(.15f,.25f,.35f,.9f));
+                    Box(new Rect(480,635,320*player.ThrowPower,7),player.PreviewSuper?new Color(1,.7f,.18f):new Color(.65f,.9f,1));
+                    GUI.Label(new Rect(480,608,360,25),"Сила: "+Mathf.RoundToInt(player.ThrowPower*100)+"% • отпусти для броска",small);
+                }
                 // Screen crosshair complements the actual ballistic preview.
                 Box(new Rect(638,397,4,6),new Color(1,.85f,.5f,.9f));Box(new Rect(635,400,10,2),new Color(1,.85f,.5f,.9f));
                 if(phase==Phase.Countdown){GUI.Label(new Rect(550,290,200,90),Mathf.CeilToInt(countdown).ToString(),new GUIStyle(title){fontSize=80,alignment=TextAnchor.MiddleCenter});}
@@ -195,7 +202,7 @@ namespace WinterYard
                     if(GUILayout.Button("ЗАКРЫТЬ ИГРУ",button))CloseGame();
                     GUILayout.Space(25);
                     Text("Побед во дворе: "+PlayerPrefs.GetInt("WinterYardWins",0),small);
-                    Text("WASD — движение • мышь — обзор\nЛКМ — толчок • ПКМ — снежок • Q — суперснежок\nSpace — прыжок • Shift — рывок\nEsc в матче — пауза и выход в главное меню",small);
+                    Text("WASD — движение • мышь — обзор\nЛКМ — толчок • удерживай/отпусти ПКМ — снежок\nУдерживай/отпусти Q — супер • колесо — высота дуги\nSpace — прыжок • Shift — рывок\nEsc в матче — пауза и выход в главное меню",small);
                 }
                 else if(phase==Phase.Settings)
                 {

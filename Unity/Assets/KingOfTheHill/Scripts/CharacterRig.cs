@@ -76,7 +76,7 @@ namespace WinterYard
             bones.Add(rb);colliders.Add(visual.GetComponent<Collider>());restPositions.Add(position);restRotations.Add(Quaternion.identity);
         }
         public void PlayAttack(bool isThrow){action=.35f;throwing=isThrow;}
-        public void Animate(float dt,float speed,float depth,bool grounded,float stun)
+        public void Animate(float dt,float speed,float depth,bool grounded,float stun,float charge=-1)
         {
             if(IsRagdoll)return;
             action=Mathf.Max(0,action-dt);recoverBlend=Mathf.MoveTowards(recoverBlend,0,dt*2);
@@ -95,6 +95,11 @@ namespace WinterYard
                 bones[arm].transform.localRotation=Quaternion.Euler(-step*24,0,side==0?8:-8);
                 bones[arm+1].transform.localPosition+=Vector3.forward*(-step*.12f);
                 if(!grounded){bones[arm].transform.localRotation=Quaternion.Euler(-25,0,side==0?35:-35);}
+                if(charge>=0&&side==1)
+                {
+                    bones[arm].transform.localRotation=Quaternion.Euler(-65-charge*45,0,-12);
+                    bones[arm+1].transform.localPosition+=new Vector3(0,.22f+charge*.12f,-.2f);
+                }
                 if(action>0&&(!throwing||side==1))
                 {
                     float reach=Mathf.Sin(action/.35f*Mathf.PI);

@@ -29,6 +29,12 @@ namespace WinterYard
         bool leftStep;
         Vector3 move, facing=Vector3.forward;
         public Vector3 AimDirection => facing;
+        readonly LobCharge charge=new LobCharge();
+        public bool IsCharging => charge.Active;
+        public float ThrowPower => charge.Power;
+        public bool PreviewSuper => charge.Active&&charge.Super;
+        public float ThrowAngle {get;private set;}=LobThrow.DefaultAngle;
+        float queuedPower,queuedAngle=LobThrow.DefaultAngle;
         public const float PushStrength=8f;
         public const float PushLift=2f;
         float think, stepClock, jumpBuffer, dashBuffer;
@@ -56,7 +62,7 @@ namespace WinterYard
 
         void Update()
         {
-            if(!GameSession.Instance.Running)return;
+            if(!GameSession.Instance.Running){CancelThrowCharge();return;}
             if(IsPlayer)
             {
                 float x=(Input.GetKey(KeyCode.D)?1:0)-(Input.GetKey(KeyCode.A)?1:0);
@@ -69,11 +75,23 @@ namespace WinterYard
                 if(Input.GetKeyDown(KeyCode.Space))jumpBuffer=.15f;
                 if(Input.GetKeyDown(KeyCode.LeftShift)||Input.GetKeyDown(KeyCode.RightShift))dashBuffer=.15f;
                 pushRequested|=Input.GetMouseButtonDown(0);
-                throwRequested|=Input.GetMouseButtonDown(1);
-                superRequested|=Input.GetKeyDown(KeyCode.Q);
+                ThrowAngle=Mathf.Clamp(ThrowAngle+Input.mouseScrollDelta.y*3,LobThrow.MinAngle,LobThrow.MaxAngle);
+                if(Stun<=0&&!IsRagdoll&&HasSnow&&!throwRequested&&!superRequested)
+                {
+                    if(Input.GetMouseButtonDown(1))charge.Begin(false);
+                    else if(Input.GetKeyDown(KeyCode.Q)&&Combat.SuperReady)charge.Begin(true);
+                }
+                charge.Tick(Time.deltaTime);
+                if(charge.Active&&((charge.Super&&Input.GetKeyUp(KeyCode.Q))||(!charge.Super&&Input.GetMouseButtonUp(1))))
+                {
+                    if(charge.Release(out queuedPower,out var special))
+                    {
+                        queuedAngle=ThrowAngle;superRequested=special;throwRequested=!special;
+                    }
+                }
             }
             float walkSpeed=Vector3.ProjectOnPlane(body.linearVelocity,Vector3.up).magnitude;
-            rig.Animate(Time.deltaTime,walkSpeed,Surface.Depth,Grounded,Stun);
+            rig.Animate(Time.deltaTime,walkSpeed,Surface.Depth,Grounded,Stun,IsCharging?ThrowPower:-1);
         }
 
         void FixedUpdate()
@@ -112,7 +130,7 @@ namespace WinterYard
                 if((superRequested&&Combat.SuperReady)||throwRequested)
                 {
                     bool super=superRequested&&Combat.SuperReady;
-                    if(Combat.TryThrow(super)){Snowball.Launch(this,facing,super);rig.PlayAttack(true);GameSession.Instance.Beep(super?900:650,.08f);}
+                    if(Combat.TryThrow(super)){Snowball.Launch(this,facing,super,queuedPower,queuedAngle);rig.PlayAttack(true);GameSession.Instance.Beep(super?900:650,.08f);}
                 }
             }
             jumpBuffer=Mathf.Max(0,jumpBuffer-dt);dashBuffer=Mathf.Max(0,dashBuffer-dt);
@@ -158,6 +176,7 @@ namespace WinterYard
             if(enemy&&distance>4&&distance<11&&HasSnow&&Random.value<.15f)
             {
                 facing=Vector3.ProjectOnPlane(enemy.transform.position-p,Vector3.up).normalized;
+                queuedPower=LobThrow.BotPower(distance);queuedAngle=LobThrow.DefaultAngle;
                 if(Combat.SuperReady)superRequested=true;else throwRequested=true;
             }
         }
@@ -182,6 +201,7 @@ namespace WinterYard
         {
             // A downed opponent cannot be farmed for combo or kept down by repeated hits.
             if(Combat.KnockdownRemaining>0||rig.IsRagdoll)return false;
+            CancelThrowCharge();
             Combat.BreakCombo();
             bool hillFall=HillImpact.IsStandingOnHill(transform.position,Grounded);
             if(knockdown)Combat.KnockDown();
@@ -197,6 +217,10 @@ namespace WinterYard
             else body.AddForce(impulse,ForceMode.Impulse);
             GameSession.Instance.Beep(knockdown?110:220,.14f);
             return true;
+        }
+        public void CancelThrowCharge()
+        {
+            charge.Cancel();throwRequested=superRequested=false;queuedPower=0;
         }
         public static Fighter FromCollider(Collider collider)
         {

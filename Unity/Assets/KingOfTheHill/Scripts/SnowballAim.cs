@@ -9,7 +9,7 @@ namespace WinterYard
         LineRenderer arc, marker;
         Material material;
         readonly RaycastHit[] hits=new RaycastHit[24];
-        readonly Vector3[] points=new Vector3[161];
+        readonly Vector3[] points=new Vector3[401];
         void Awake()
         {
             owner=GetComponent<Fighter>();material=Arena.Material(new Color(.75f,.9f,1));
@@ -28,14 +28,14 @@ namespace WinterYard
         {
             bool visible=owner.IsPlayer&&GameSession.Instance.Running&&owner.Stun<=0&&!owner.IsRagdoll;
             arc.enabled=marker.enabled=visible;if(!visible)return;
-            // Preview Q when a super is available; both shots share the same velocity.
-            bool super=owner.Combat.SuperReady;
+            // Preview the held shot, using the exact launch power and elevation.
+            bool super=owner.PreviewSuper;
             Vector3 position=Snowball.SpawnPosition(owner,owner.AimDirection);
-            Vector3 velocity=Snowball.LaunchVelocity(owner.AimDirection);
+            Vector3 velocity=Snowball.LaunchVelocity(owner.AimDirection,owner.ThrowPower,owner.ThrowAngle);
             Vector3 normal=Vector3.up;bool impact=false;
             float dt=Time.fixedDeltaTime;
             int count=1;points[0]=position;
-            int steps=Mathf.Min(160,Mathf.CeilToInt(Snowball.Lifetime/dt));
+            int steps=Mathf.Min(400,Mathf.CeilToInt(Snowball.Lifetime/dt));
             for(int i=0;i<steps;i++)
             {
                 velocity+=Physics.gravity*dt;
@@ -55,6 +55,7 @@ namespace WinterYard
                 }
                 position=next;points[count++]=position;
             }
+            arc.widthMultiplier=.035f+owner.ThrowPower*.025f;
             arc.positionCount=count;
             // Avoid SetPositions with unused trailing points in the fixed buffer.
             for(int i=0;i<count;i++)arc.SetPosition(i,points[i]);

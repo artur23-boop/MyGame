@@ -8,12 +8,12 @@ namespace WinterYard
         Rigidbody body;
         bool super, resolved;
         Vector3 flightDirection;
-        public const float Lifetime=3;
+        public const float Lifetime=5;
         float lifetime=Lifetime;
         public static float Radius(bool super) => super ? .24f : .12f;
         public static Vector3 SpawnPosition(Fighter source,Vector3 direction) => source.transform.position+direction*.9f+Vector3.up*.45f;
-        public static Vector3 LaunchVelocity(Vector3 direction) => direction*17+Vector3.up*3.2f;
-        public static void Launch(Fighter source,Vector3 direction,bool isSuper=false)
+        public static Vector3 LaunchVelocity(Vector3 direction,float power=0,float angle=LobThrow.DefaultAngle) => LobThrow.Velocity(direction,power,angle);
+        public static void Launch(Fighter source,Vector3 direction,bool isSuper=false,float power=0,float angle=LobThrow.DefaultAngle)
         {
             var obj=GameObject.CreatePrimitive(PrimitiveType.Sphere);
             obj.name=isSuper?"Super snowball":"Snowball";
@@ -25,7 +25,7 @@ namespace WinterYard
             shot.body=obj.AddComponent<Rigidbody>();shot.body.mass=.1f;
             shot.body.collisionDetectionMode=CollisionDetectionMode.ContinuousDynamic;
             shot.body.linearDamping=0;shot.body.useGravity=true;
-            shot.body.linearVelocity=LaunchVelocity(direction);
+            shot.body.linearVelocity=LaunchVelocity(direction,power,angle);
             Physics.IgnoreCollision(obj.GetComponent<Collider>(),source.GetComponent<Collider>());
         }
         void Update()
