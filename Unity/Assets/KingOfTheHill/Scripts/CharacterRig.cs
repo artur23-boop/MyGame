@@ -16,6 +16,7 @@ namespace WinterYard
         readonly List<Quaternion> restRotations=new List<Quaternion>();
         readonly List<Material> ownedMaterials=new List<Material>();
         Transform originalParent;
+        CharacterModel authoredModel;
         float gait,action,recoverBlend,slideStarted;
         bool hillSlide;
         PhysicsMaterial slideMaterial;
@@ -45,6 +46,10 @@ namespace WinterYard
             Arena.Shape("Pom pom",PrimitiveType.Sphere,new Vector3(0,.39f,0),Vector3.one*.18f,Arena.Snow,false,bones[2].transform);
             Arena.Shape("Scarf",PrimitiveType.Cube,new Vector3(0,.27f,.02f),new Vector3(.69f,.12f,.58f),Arena.Warm,false,bones[1].transform);
             if(owner.IsPlayer)Arena.Shape("Your marker",PrimitiveType.Sphere,new Vector3(0,.58f,0),Vector3.one*.14f,Arena.Warm,false,bones[2].transform);
+            var originalRenderers=GetComponentsInChildren<Renderer>();
+            authoredModel=new CharacterModel();
+            if(authoredModel.Attach(owner.DisplayName,owner.IsPlayer,bones))
+                foreach(var renderer in originalRenderers)if(renderer.gameObject.name!="Your marker")renderer.enabled=false;
             float total=0;foreach(var bone in bones)total+=bone.mass;
             foreach(var bone in bones)bone.mass=mass*bone.mass/total;
             for(int i=0;i<colliders.Count;i++)
@@ -170,6 +175,6 @@ namespace WinterYard
             }
             return false;
         }
-        void OnDestroy(){foreach(var material in ownedMaterials)if(material)Destroy(material);if(slideMaterial)Destroy(slideMaterial);}
+        void OnDestroy(){if(authoredModel!=null)authoredModel.Dispose();foreach(var material in ownedMaterials)if(material)Destroy(material);if(slideMaterial)Destroy(slideMaterial);}
     }
 }

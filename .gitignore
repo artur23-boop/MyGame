@@ -9,3 +9,5 @@ Unity/[Uu]ser[Ss]ettings/
 Unity/.vs/
 Unity/*.csproj
 Unity/*.sln
+*.blend1
+*.blend2

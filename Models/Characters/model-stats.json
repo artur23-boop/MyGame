@@ -1,0 +1,22 @@
+{
+  "Player": {
+    "triangles": 22128,
+    "parts": 27,
+    "bones": 11
+  },
+  "Mishka": {
+    "triangles": 17856,
+    "parts": 27,
+    "bones": 11
+  },
+  "Sanyok": {
+    "triangles": 22416,
+    "parts": 27,
+    "bones": 11
+  },
+  "Dimon": {
+    "triangles": 22128,
+    "parts": 27,
+    "bones": 11
+  }
+}

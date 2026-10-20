@@ -36,4 +36,6 @@
 
 ## Геймдизайн-документ
 
-Актуальное описание Unity-версии: [PDF](docs/Game-Design-Document.pdf), [DOCX](docs/Game-Design-Document.docx), [Markdown](docs/Game-Design-Document.md). GDD 2.3 описывает правила, управление, физику, снег, снежки и комбо, интерфейс, ограничения и план развития.
+Актуальное описание Unity-версии: [PDF](docs/Game-Design-Document.pdf), [DOCX](docs/Game-Design-Document.docx), [Markdown](docs/Game-Design-Document.md). GDD 2.4 описывает правила, управление, физику, снег, снежки и комбо, интерфейс, ограничения и план развития.
+
+3D-персонажи: [модели FBX/GLB, исходник Blender и превью](Models/Characters/README.md).
