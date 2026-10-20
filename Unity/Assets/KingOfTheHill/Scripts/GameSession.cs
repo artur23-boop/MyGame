@@ -11,10 +11,11 @@ namespace WinterYard
         public readonly List<Fighter> Fighters=new List<Fighter>();
         public Camera View {get;private set;}
         public bool Running => phase==Phase.Playing;
+        public bool InMainMenu => phase==Phase.Welcome||phase==Phase.Settings;
         public int Target {get;private set;}=30;
         public int Difficulty {get;private set;}=1;
         public float Sensitivity {get;private set;}=2;
-        enum Phase {Menu,Countdown,Playing,Paused,Result}
+        enum Phase {Welcome,Settings,Countdown,Playing,Paused,Result}
         Phase phase;
         float countdown,volume=.4f;
         Fighter winner;
@@ -48,7 +49,7 @@ namespace WinterYard
             View.clearFlags=CameraClearFlags.SolidColor;View.backgroundColor=new Color(.24f,.34f,.46f);
             viewObj.AddComponent<AudioListener>();viewObj.AddComponent<YardCamera>();
             speaker=gameObject.AddComponent<AudioSource>();speaker.spatialBlend=0;
-            MakeFighters();phase=Phase.Menu;CursorState(false);initialized=true;
+            MakeFighters();phase=Phase.Welcome;CursorState(false);initialized=true;
         }
         void MakeFighters()
         {
@@ -79,6 +80,7 @@ namespace WinterYard
             {
                 if(phase==Phase.Playing)Pause();
                 else if(phase==Phase.Paused)Resume();
+                else if(phase==Phase.Settings||phase==Phase.Countdown)ReturnToMenu();
             }
         }
         void OnApplicationFocus(bool focused){if(!focused&&Running)Pause();}
@@ -87,7 +89,7 @@ namespace WinterYard
         public void ReturnToMenu()
         {
             // Keep menu navigation separate from closing the application.
-            phase=Phase.Menu;Time.timeScale=1;countdown=0;winner=null;
+            phase=Phase.Welcome;Time.timeScale=1;countdown=0;winner=null;
             CursorState(false);MakeFighters();
         }
         static void CloseGame()
@@ -170,19 +172,30 @@ namespace WinterYard
                 Box(new Rect(0,0,1280,800),new Color(.03f,.07f,.12f,.82f));
                 GUILayout.BeginArea(new Rect(365,65,550,685));
                 Text("ЗИМНИЙ ДВОР • ДЕКАБРЬ 1998",small);GUILayout.Space(12);
-                Text(phase==Phase.Result?(winner.IsPlayer?"ТЫ — ЦАРЬ ГОРЫ!":winner.DisplayName+" — царь горы"):phase==Phase.Paused?"ГРЕЕМ ВАРЕЖКИ":"ЦАРЬ ГОРЫ",title);
+                Text(phase==Phase.Result?(winner.IsPlayer?"ТЫ — ЦАРЬ ГОРЫ!":winner.DisplayName+" — царь горы"):phase==Phase.Paused?"ГРЕЕМ ВАРЕЖКИ":phase==Phase.Settings?"НАСТРОЙКИ":"ЦАРЬ ГОРЫ",title);
                 GUILayout.Space(15);
-                if(phase==Phase.Menu)
+                if(phase==Phase.Welcome)
                 {
-                    Text("Знакомый двор. Свежий снег. Одна вершина.\nСтолкни соперников и удерживай ледяной круг.");GUILayout.Space(12);
+                    Text("Добро пожаловать во двор!");GUILayout.Space(8);
+                    Text("Свежий снег. Три соперника. Одна вершина.\nУдержи гору и стань царём этого двора.");
+                    GUILayout.Space(30);
+                    if(GUILayout.Button("ИГРАТЬ — ВЫЙТИ ВО ДВОР",button))StartMatch();
+                    GUILayout.Space(8);
+                    if(GUILayout.Button("НАСТРОЙКИ",button))phase=Phase.Settings;
+                    GUILayout.Space(8);
+                    if(GUILayout.Button("ЗАКРЫТЬ ИГРУ",button))CloseGame();
+                    GUILayout.Space(25);
+                    Text("Побед во дворе: "+PlayerPrefs.GetInt("WinterYardWins",0),small);
+                    Text("WASD — движение • мышь — обзор\nЛКМ — толчок • ПКМ — снежок • Q — суперснежок\nSpace — прыжок • Shift — рывок\nEsc в матче — пауза и выход в главное меню",small);
+                }
+                else if(phase==Phase.Settings)
+                {
                     Text("Сложность",small);Difficulty=GUILayout.SelectionGrid(Difficulty,new[]{"Легко","Средне","Сложно"},3,button);
                     Text("Секунд до победы",small);int index=Target==20?0:Target==30?1:2;index=GUILayout.SelectionGrid(index,new[]{"20","30","60"},3,button);Target=index==0?20:index==1?30:60;
                     Text("Громкость",small);volume=GUILayout.HorizontalSlider(volume,0,1);
                     Text("Чувствительность мыши",small);Sensitivity=GUILayout.HorizontalSlider(Sensitivity,.5f,5);
-                    GUILayout.Space(15);if(GUILayout.Button("ВЫЙТИ ВО ДВОР",button))StartMatch();
-                    Text("Побед во дворе: "+PlayerPrefs.GetInt("WinterYardWins",0),small);
-                    Text("WASD — идти • мышь — смотреть • Space — прыгать\nЛКМ — толкать • ПКМ — снежок • Q — суперснежок",small);
-                    if(GUILayout.Button("ЗАКРЫТЬ ИГРУ",button))CloseGame();
+                    GUILayout.Space(25);
+                    if(GUILayout.Button("НАЗАД В ГЛАВНОЕ МЕНЮ",button))ReturnToMenu();
                 }
                 else
                 {
