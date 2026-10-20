@@ -33,3 +33,7 @@
 ## Unity 3D
 
 Отдельный Unity-проект находится в папке [`Unity`](Unity/README.md). Для Unity Hub выбирайте эту папку, а не корень репозитория. Требуются Unity 6000.6.6f1 и URP 17.6.0. Инструкция запуска и сборки Windows/macOS — в `Unity/README.md`. Проект подготовлен без запуска редактора; готового exe пока нет.
+
+## Геймдизайн-документ
+
+Актуальное описание Unity-версии: [PDF](docs/Game-Design-Document.pdf), [DOCX](docs/Game-Design-Document.docx), [Markdown](docs/Game-Design-Document.md). GDD 2.0 описывает правила, управление, физику, снег, снежки и комбо, интерфейс, ограничения и план развития.
