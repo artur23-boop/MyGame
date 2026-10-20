@@ -15,6 +15,13 @@ namespace WinterYard
         public readonly CombatState Combat=new CombatState();
         public bool HasSnow => Combat.HasSnow;
         public bool OnSummit { get; private set; }
+        [Header("Rigidbody physics")]
+        [SerializeField,Min(.1f)] float bodyMass=1;
+        [SerializeField,Min(.1f)] float movementForceScale=1;
+        [SerializeField,Min(0)] float jumpImpulseScale=1;
+        [SerializeField,Min(0)] float dashImpulseScale=1;
+        [SerializeField,Min(0)] float pushImpulse=8;
+        [SerializeField,Min(0)] float pushUpImpulse=2;
         Rigidbody body;
         Transform model, leftBoot, rightBoot;
         public SnowSample Surface {get;private set;}
@@ -31,7 +38,7 @@ namespace WinterYard
         public void Initialize(string label, Color color, bool player)
         {
             DisplayName=label;CoatColor=color;IsPlayer=player;
-            body=GetComponent<Rigidbody>();body.mass=1;body.linearDamping=.8f;body.angularDamping=5;
+            body=GetComponent<Rigidbody>();body.mass=bodyMass;body.linearDamping=.8f;body.angularDamping=5;
             body.constraints=RigidbodyConstraints.FreezeRotation;body.interpolation=RigidbodyInterpolation.Interpolate;
             body.collisionDetectionMode=CollisionDetectionMode.ContinuousDynamic;
             var capsule=GetComponent<CapsuleCollider>();capsule.height=2.1f;capsule.radius=.42f;
@@ -51,6 +58,12 @@ namespace WinterYard
             }
             if(player)gameObject.AddComponent<SnowballAim>();
             if(player) Arena.Shape("Your marker",PrimitiveType.Sphere,new Vector3(0,1.5f,0),Vector3.one*.16f,Arena.Warm,false,model);
+        }
+
+        void OnValidate()
+        {
+            bodyMass=Mathf.Max(.1f,bodyMass);
+            if(Application.isPlaying&&TryGetComponent<Rigidbody>(out var rigidbody))rigidbody.mass=bodyMass;
         }
 
         void Update()
@@ -104,11 +117,13 @@ namespace WinterYard
                 float acceleration=grounded?Surface.Acceleration:6;
                 if(grounded&&Surface.IsIce&&move.sqrMagnitude<.01f)acceleration=2;
                 var desired=move*(grounded?Surface.Speed:5);
-                // Limit acceleration, preserving impulses instead of overwriting knockback.
-                body.AddForce(Vector3.ClampMagnitude(desired-horizontal,acceleration*dt),ForceMode.VelocityChange);
+                // Forces are integrated by PhysX in FixedUpdate. A heavier body accelerates
+                // less under the same force; target speed and snow resistance remain intact.
+                Vector3 driveForce=Vector3.ClampMagnitude((desired-horizontal)/dt,acceleration)*movementForceScale;
+                body.AddForce(driveForce,ForceMode.Force);
                 if(facing.sqrMagnitude>.01f)body.MoveRotation(Quaternion.LookRotation(facing));
-                if(jumpBuffer>0&&grounded){body.AddForce(Vector3.up*Surface.Jump,ForceMode.VelocityChange);jumpBuffer=0;}
-                if(dashBuffer>0&&DashCooldown<=0){body.AddForce((move.sqrMagnitude>.01f?move.normalized:facing)*(grounded?Surface.Dash:9),ForceMode.VelocityChange);DashCooldown=3;dashBuffer=0;}
+                if(jumpBuffer>0&&grounded){body.AddForce(Vector3.up*Surface.Jump*jumpImpulseScale,ForceMode.Impulse);jumpBuffer=0;}
+                if(dashBuffer>0&&DashCooldown<=0){body.AddForce((move.sqrMagnitude>.01f?move.normalized:facing)*(grounded?Surface.Dash:9)*dashImpulseScale,ForceMode.Impulse);DashCooldown=3;dashBuffer=0;}
                 if(pushRequested)Push();
                 if((superRequested&&Combat.SuperReady)||throwRequested)
                 {
@@ -174,7 +189,7 @@ namespace WinterYard
                 if(other==this||other.Stun>1)continue;
                 var delta=other.transform.position-transform.position;
                 if(delta.magnitude<2.3f&&Vector3.Dot(delta.normalized,facing)>.35f)
-                    landed|=other.Hit(facing*PushStrength+Vector3.up*PushLift,.6f);
+                    landed|=other.Hit(facing*pushImpulse+Vector3.up*pushUpImpulse,.6f);
             }
             if(landed)Combat.RegisterHit();else Combat.BreakCombo();
         }
@@ -186,7 +201,7 @@ namespace WinterYard
             Combat.BreakCombo();
             if(knockdown)Combat.KnockDown();
             Stun=Mathf.Max(Stun,knockdown?CombatState.KnockdownSeconds:stun);OnSummit=false;
-            body.AddForce(impulse,ForceMode.VelocityChange);
+            body.AddForce(impulse,ForceMode.Impulse);
             GameSession.Instance.Beep(knockdown?110:220,.14f);
             return true;
         }
