@@ -88,6 +88,7 @@ namespace WinterYard
             if(rig.IsRagdoll)
             {
                 OnSummit=false;body.position=rig.HipPosition;
+                rig.SimulateHillSlide();
                 jumpBuffer=dashBuffer=0;pushRequested=throwRequested=superRequested=false;
                 if(Stun<=0&&Combat.KnockdownRemaining<=0&&rig.Recover(body,GetComponent<Collider>()))Stun=.45f;
                 return;
@@ -182,13 +183,16 @@ namespace WinterYard
             // A downed opponent cannot be farmed for combo or kept down by repeated hits.
             if(Combat.KnockdownRemaining>0||rig.IsRagdoll)return false;
             Combat.BreakCombo();
+            bool hillFall=HillImpact.IsStandingOnHill(transform.position,Grounded);
             if(knockdown)Combat.KnockDown();
-            Stun=Mathf.Max(Stun,knockdown?CombatState.KnockdownSeconds:stun);OnSummit=false;
-            if(stun>=1||knockdown)
+            float duration=knockdown?CombatState.KnockdownSeconds:stun;
+            if(hillFall)duration=Mathf.Max(duration,HillImpact.MinimumFallSeconds);
+            Stun=Mathf.Max(Stun,duration);OnSummit=false;
+            if(stun>=1||knockdown||hillFall)
             {
                 Vector3 velocity=body.linearVelocity;
                 GetComponent<Collider>().enabled=false;body.isKinematic=true;
-                rig.Fall(velocity,impulse,body.mass);
+                rig.Fall(hillFall?HillImpact.InheritedVelocity(velocity):velocity,hillFall?HillImpact.Kick(impulse):impulse,body.mass,hillFall);
             }
             else body.AddForce(impulse,ForceMode.Impulse);
             GameSession.Instance.Beep(knockdown?110:220,.14f);

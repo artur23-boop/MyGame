@@ -16,7 +16,9 @@ namespace WinterYard
         readonly List<Quaternion> restRotations=new List<Quaternion>();
         readonly List<Material> ownedMaterials=new List<Material>();
         Transform originalParent;
-        float gait,action,recoverBlend;
+        float gait,action,recoverBlend,slideStarted;
+        bool hillSlide;
+        PhysicsMaterial slideMaterial;
         bool throwing;
         public void Build(Fighter owner,Color color,float mass)
         {
@@ -101,10 +103,12 @@ namespace WinterYard
                 }
             }
         }
-        public void Fall(Vector3 velocity,Vector3 impulse,float controllerMass)
+        public void Fall(Vector3 velocity,Vector3 impulse,float controllerMass,bool fromHill=false)
         {
             if(IsRagdoll)return;
-            IsRagdoll=true;transform.SetParent(GameSession.Instance.transform,true);
+            IsRagdoll=true;hillSlide=fromHill;slideStarted=Time.time;
+            if(!slideMaterial)slideMaterial=new PhysicsMaterial("Ragdoll sliding in snow"){dynamicFriction=.12f,staticFriction=.18f,bounciness=0,frictionCombine=PhysicsMaterialCombine.Minimum};
+            transform.SetParent(GameSession.Instance.transform,true);
             float previousMass=0;foreach(var bone in bones)previousMass+=bone.mass;
             foreach(var bone in bones)bone.mass=Mathf.Max(.1f,controllerMass)*bone.mass/previousMass;
             float total=0;foreach(var bone in bones)total+=bone.mass;
@@ -113,14 +117,36 @@ namespace WinterYard
             for(int i=0;i<bones.Count;i++)
             {
                 bones[i].transform.localPosition=restPositions[i];bones[i].transform.localRotation=restRotations[i];
+                colliders[i].sharedMaterial=fromHill?slideMaterial:null;
                 colliders[i].enabled=true;bones[i].isKinematic=false;
+                bones[i].linearDamping=fromHill?.1f:.15f;bones[i].angularDamping=fromHill?.6f:1.5f;
                 bones[i].linearVelocity=velocity;bones[i].angularVelocity=Vector3.zero;
                 bones[i].AddForce(impulse*(bones[i].mass/total),ForceMode.Impulse);
             }
-            bones[1].AddTorque(Owner.transform.right*1.5f,ForceMode.Impulse);
+            if(fromHill)
+            {
+                Vector3 horizontal=Vector3.ProjectOnPlane(impulse,Vector3.up).normalized;
+                if(horizontal.sqrMagnitude<.01f)horizontal=Owner.transform.forward;
+                Vector3 axis=Vector3.Cross(Vector3.up,horizontal);
+                bones[0].AddTorque(axis*.15f*total,ForceMode.Impulse);
+                bones[1].AddTorque(axis*.1f*total,ForceMode.Impulse);
+            }
+            else bones[1].AddTorque(Owner.transform.right*1.5f,ForceMode.Impulse);
+        }
+        public void SimulateHillSlide()
+        {
+            if(!IsRagdoll||!hillSlide)return;
+            var p=HipPosition;
+            if(p.x*p.x+p.z*p.z>53||!Physics.Raycast(p+Vector3.up*.25f,Vector3.down,out var hit,.95f,1<<Arena.GroundLayer))return;
+            // Only contact on an actual slope gets assistance; no radial force in mid-air.
+            if(hit.normal.y>=.98f||hit.normal.y<.4f)return;
+            Vector3 downhill=Vector3.ProjectOnPlane(Physics.gravity,hit.normal)*.25f;
+            foreach(var bone in bones)if(bone.linearVelocity.magnitude<7)bone.AddForce(downhill,ForceMode.Acceleration);
         }
         public bool Recover(Rigidbody controller,Collider capsule)
         {
+            // Let the body finish rolling instead of snapping upright on the slope.
+            if(hillSlide&&Time.time-slideStarted<4.5f&&bones[0].linearVelocity.magnitude>1.25f)return false;
             Vector3 hips=HipPosition;
             if(hips.y<-5)hips=new Vector3(0,1,-11);
             for(int i=0;i<9;i++)
@@ -135,10 +161,10 @@ namespace WinterYard
                 controller.position=foot+Vector3.up*1.05f;controller.isKinematic=false;controller.linearVelocity=Vector3.zero;
                 transform.SetParent(originalParent,false);transform.localPosition=Vector3.zero;transform.localRotation=Quaternion.identity;
                 for(int b=0;b<bones.Count;b++){bones[b].transform.localPosition=restPositions[b];bones[b].transform.localRotation=restRotations[b];}
-                capsule.enabled=true;IsRagdoll=false;recoverBlend=1;return true;
+                capsule.enabled=true;IsRagdoll=false;hillSlide=false;recoverBlend=1;return true;
             }
             return false;
         }
-        void OnDestroy(){foreach(var material in ownedMaterials)if(material)Destroy(material);}
+        void OnDestroy(){foreach(var material in ownedMaterials)if(material)Destroy(material);if(slideMaterial)Destroy(slideMaterial);}
     }
 }
