@@ -24,6 +24,7 @@ namespace WinterYard
         Texture2D pixel;
         readonly Dictionary<int,AudioClip> tones=new Dictionary<int,AudioClip>();
         bool initialized;
+        readonly MenuArtwork menuArtwork=new MenuArtwork();
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
         static void Bootstrap()
@@ -146,7 +147,13 @@ namespace WinterYard
         void OnGUI()
         {
             if(!initialized||Fighters.Count==0)return;Styles();
-            var old=GUI.matrix;float scale=Mathf.Min(Screen.width/1280f,Screen.height/800f);
+            var old=GUI.matrix;
+            if(InMainMenu)
+            {
+                GUI.matrix=Matrix4x4.identity;
+                menuArtwork.Draw(new Rect(0,0,Screen.width,Screen.height));
+            }
+            float scale=Mathf.Min(Screen.width/1280f,Screen.height/800f);
             GUI.matrix=Matrix4x4.TRS(new Vector3((Screen.width-1280*scale)/2,(Screen.height-800*scale)/2),Quaternion.identity,Vector3.one*scale);
             if(phase==Phase.Playing||phase==Phase.Countdown)
             {
@@ -169,8 +176,8 @@ namespace WinterYard
             }
             else
             {
-                Box(new Rect(0,0,1280,800),new Color(.03f,.07f,.12f,.82f));
-                GUILayout.BeginArea(new Rect(365,65,550,685));
+                if(!InMainMenu)Box(new Rect(0,0,1280,800),new Color(.03f,.07f,.12f,.82f));
+                GUILayout.BeginArea(InMainMenu?new Rect(65,65,470,685):new Rect(365,65,550,685));
                 Text("ЗИМНИЙ ДВОР • ДЕКАБРЬ 1998",small);GUILayout.Space(12);
                 Text(phase==Phase.Result?(winner.IsPlayer?"ТЫ — ЦАРЬ ГОРЫ!":winner.DisplayName+" — царь горы"):phase==Phase.Paused?"ГРЕЕМ ВАРЕЖКИ":phase==Phase.Settings?"НАСТРОЙКИ":"ЦАРЬ ГОРЫ",title);
                 GUILayout.Space(15);
@@ -212,6 +219,7 @@ namespace WinterYard
             if(Instance!=this)return;Time.timeScale=1;CursorState(false);Instance=null;
             foreach(var tone in tones.Values)if(tone)Destroy(tone);
             if(pixel)Destroy(pixel);
+            menuArtwork.Dispose();
         }
     }
 }
