@@ -29,7 +29,9 @@ namespace WinterYardEditor
                 var hillFighter=hillActor.AddComponent<Fighter>();hillFighter.Initialize("Hill check",Color.gray,false);
                 Physics.SyncTransforms();
                 if(!hillFighter.Grounded)throw new Exception("Hill test requires the generated courtyard ground.");
-                if(!hillFighter.Hit(Vector3.forward*8+Vector3.up*2,.6f)||!hillFighter.IsRagdoll)throw new Exception("A regular push on the hill must activate ragdoll.");
+                if(!hillFighter.Hit(Vector3.forward*8+Vector3.up*2,.6f)||hillFighter.IsRagdoll)throw new Exception("An ordinary push at the center must only stagger.");
+                hillActor.GetComponent<Rigidbody>().position=new Vector3(0,4.06f,1.9f);Physics.SyncTransforms();
+                if(!hillFighter.Hit(Vector3.forward*8+Vector3.up*2,.6f)||!hillFighter.IsRagdoll)throw new Exception("A strong outward edge push must activate ragdoll.");
                 if(hillFighter.Stun<HillImpact.MinimumFallSeconds)throw new Exception("Hill fall must not recover immediately.");
                 Debug.Log("Ragdoll structure, super activation and hill-push activation checks passed. Observe actual rolling/get-up in a real match separately.");
             }

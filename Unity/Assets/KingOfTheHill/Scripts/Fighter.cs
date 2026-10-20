@@ -138,7 +138,6 @@ namespace WinterYard
             var p=transform.position;
             OnSummit=new Vector2(p.x,p.z).magnitude<2.2f&&p.y>3.8f&&Grounded&&Stun<=0&&Combat.KnockdownRemaining<=0;
             if(OnSummit){Score+=dt;if(Score>=GameSession.Instance.Target)GameSession.Instance.Finish(this);}
-            if(Stun>0&&p.y>1.3f)body.AddForce(new Vector3(p.x,0,p.z).normalized*6,ForceMode.Acceleration);
             if(p.y<-5){body.position=new Vector3(0,2,-12);body.linearVelocity=Vector3.zero;}
             var planarSpeed=Vector3.ProjectOnPlane(body.linearVelocity,Vector3.up).magnitude;
             if(grounded&&planarSpeed>.65f&&Stun<=0)
@@ -203,7 +202,8 @@ namespace WinterYard
             if(Combat.KnockdownRemaining>0||rig.IsRagdoll)return false;
             CancelThrowCharge();
             Combat.BreakCombo();
-            bool hillFall=HillImpact.IsStandingOnHill(transform.position,Grounded);
+            bool standingOnHill=HillImpact.IsStandingOnHill(transform.position,Grounded);
+            bool hillFall=HillImpact.ShouldTumble(transform.position,Grounded,impulse,body.linearVelocity,body.mass,stun,knockdown);
             if(knockdown)Combat.KnockDown();
             float duration=knockdown?CombatState.KnockdownSeconds:stun;
             if(hillFall)duration=Mathf.Max(duration,HillImpact.MinimumFallSeconds);
@@ -214,7 +214,7 @@ namespace WinterYard
                 GetComponent<Collider>().enabled=false;body.isKinematic=true;
                 rig.Fall(hillFall?HillImpact.InheritedVelocity(velocity):velocity,hillFall?HillImpact.Kick(impulse):impulse,body.mass,hillFall);
             }
-            else body.AddForce(impulse,ForceMode.Impulse);
+            else body.AddForce(standingOnHill?HillImpact.Kick(impulse):impulse,ForceMode.Impulse);
             GameSession.Instance.Beep(knockdown?110:220,.14f);
             return true;
         }

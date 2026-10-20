@@ -15,6 +15,15 @@ namespace WinterYardEditor
             Check(HillImpact.IsStandingOnHill(new Vector3(4,3,0),true),"slope counts");
             Check(!HillImpact.IsStandingOnHill(new Vector3(0,4.05f,1),false),"airborne fighter does not count");
             Check(!HillImpact.IsStandingOnHill(new Vector3(12,1.1f,0),true),"flat yard does not count");
+            Vector3 center=new Vector3(0,4.05f,1),edge=new Vector3(0,4.05f,1.9f);
+            Check(!HillImpact.ShouldTumble(center,true,Vector3.forward*8,Vector3.zero,1,.6f,false),"stable center absorbs an ordinary push");
+            Check(HillImpact.ShouldTumble(edge,true,Vector3.forward*8,Vector3.zero,1,.6f,false),"strong outward edge push tumbles");
+            Check(!HillImpact.ShouldTumble(edge,true,Vector3.back*8,Vector3.zero,1,.6f,false),"inward edge push does not tumble");
+            Check(!HillImpact.ShouldTumble(edge,true,Vector3.right*8,Vector3.zero,1,.6f,false),"tangential push does not tumble");
+            Check(!HillImpact.ShouldTumble(edge,true,Vector3.forward*3,Vector3.zero,1,.6f,false),"weak edge push does not tumble");
+            Check(!HillImpact.ShouldTumble(edge,true,Vector3.forward*8,Vector3.zero,2,.6f,false),"mass resists loss of balance");
+            Check(HillImpact.ShouldTumble(center,true,Vector3.forward*8,Vector3.zero,1,1.8f,false),"head hit still tumbles");
+            Check(HillImpact.ShouldTumble(center,true,Vector3.forward*8,Vector3.zero,1,.6f,true),"super still tumbles");
             var kick=HillImpact.Kick(new Vector3(8,2,0));
             Check(Vector3.ProjectOnPlane(kick,Vector3.up).magnitude<=3.201f&&kick.y<=.351f,"hill kick stays small and low");
             Check(kick.x>0&&Mathf.Abs(kick.z)<.001f,"hit direction preserved");
