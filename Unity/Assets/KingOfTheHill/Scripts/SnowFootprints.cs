@@ -10,6 +10,7 @@ namespace WinterYard
         readonly Renderer[] renderers=new Renderer[Capacity];
         readonly float[] remaining=new float[Capacity];
         int next;
+        readonly Vector3[] anchors=new Vector3[Capacity];
         Mesh mesh;
         Material material;
         MaterialPropertyBlock tint;
@@ -46,7 +47,9 @@ namespace WinterYard
             direction=Vector3.ProjectOnPlane(direction,normal).normalized;
             if(direction.sqrMagnitude<.01f)direction=Vector3.ProjectOnPlane(Vector3.forward,normal).normalized;
             Vector3 side=Vector3.Cross(normal,direction)*(left?-.18f:.18f);
+            SnowSurface.Pack(point+side);
             int i=next;next=(next+1)%Capacity;
+            anchors[i]=point+side;
             marks[i].transform.SetPositionAndRotation(point+normal*.018f+side,Quaternion.LookRotation(direction,normal));
             remaining[i]=12;renderers[i].enabled=true;
             if(depth>.12f)
@@ -66,6 +69,11 @@ namespace WinterYard
             for(int i=0;i<Capacity;i++)if(remaining[i]>0)
             {
                 remaining[i]=Mathf.Max(0,remaining[i]-Time.deltaTime);
+                // Keep old marks seated on the surface as later steps compact it further.
+                if(anchors[i].x*anchors[i].x+anchors[i].z*anchors[i].z>=49)
+                {
+                    var p=marks[i].transform.position;p.y=SnowSurface.Height(anchors[i].x,anchors[i].z)+.018f;marks[i].transform.position=p;
+                }
                 if(remaining[i]<=0){renderers[i].enabled=false;continue;}
                 tint.SetColor(BaseColor,Color.Lerp(Arena.Snow.color,new Color(.48f,.61f,.7f),Mathf.Min(1,remaining[i]/4)));
                 renderers[i].SetPropertyBlock(tint);

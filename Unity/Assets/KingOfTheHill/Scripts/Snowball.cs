@@ -37,7 +37,7 @@ namespace WinterYard
         void OnCollisionEnter(Collision collision)
         {
             if(resolved||!GameSession.Instance.Running)return;
-            var fighter=collision.collider.GetComponentInParent<Fighter>();
+            var fighter=Fighter.FromCollider(collision.collider);
             bool landed=false;
             if(fighter&&fighter!=owner)
             {

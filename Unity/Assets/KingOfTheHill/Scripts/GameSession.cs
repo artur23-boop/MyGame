@@ -56,6 +56,7 @@ namespace WinterYard
         {
             foreach(var actor in Fighters)if(actor)Destroy(actor.gameObject);
             Fighters.Clear();
+            SnowSurface.ResetPacking();
             if(SnowFootprints.Instance)SnowFootprints.Instance.Clear();
             foreach(var shot in FindObjectsByType<Snowball>(FindObjectsSortMode.None))Destroy(shot.gameObject);
             string[] names={"Ты","Мишка","Санёк","Димон"};
@@ -168,6 +169,7 @@ namespace WinterYard
                 Text("Под ногами: "+(player.Surface.IsIce?"ЛЁД — скользко":player.Surface.Depth>.2f?"РЫХЛЫЙ СНЕГ — вязнет":"УТОПТАННЫЙ СНЕГ")+" • глубина "+Mathf.RoundToInt(player.Surface.Depth*100)+" см",small);
                 Text(player.Combat.SuperReady?"★ СУПЕРСНЕЖОК ГОТОВ — Q (нужен заряженный снежок)":"Комбо: "+player.Combat.ComboHits+" / "+CombatState.ComboTarget+(player.Combat.ComboHits>0?" • продолжи за "+player.Combat.ComboRemaining.ToString("0.0")+" с":" • попади 3 раза"),small);
                 if(player.Combat.KnockdownRemaining>0)Text("Сбит с ног! Подъём через "+player.Combat.KnockdownRemaining.ToString("0.0")+" с");
+                else if(player.IsRagdoll)Text("Поднимаемся…");
                 else if(player.Stun>0)Text("Поднимайся, весь двор смотрит!");
                 GUILayout.EndArea();
                 // Screen crosshair complements the actual ballistic preview.

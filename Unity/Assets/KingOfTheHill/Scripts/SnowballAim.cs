@@ -26,7 +26,7 @@ namespace WinterYard
         }
         void LateUpdate()
         {
-            bool visible=owner.IsPlayer&&GameSession.Instance.Running&&owner.Stun<=0;
+            bool visible=owner.IsPlayer&&GameSession.Instance.Running&&owner.Stun<=0&&!owner.IsRagdoll;
             arc.enabled=marker.enabled=visible;if(!visible)return;
             // Preview Q when a super is available; both shots share the same velocity.
             bool super=owner.Combat.SuperReady;
@@ -45,7 +45,7 @@ namespace WinterYard
                 float closest=float.MaxValue;int selected=-1;
                 for(int j=0;j<found;j++)
                 {
-                    if(hits[j].collider.GetComponentInParent<Fighter>()==owner)continue;
+                    if(Fighter.FromCollider(hits[j].collider)==owner)continue;
                     if(hits[j].distance<closest){closest=hits[j].distance;selected=j;}
                 }
                 if(selected>=0)
